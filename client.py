@@ -27,7 +27,7 @@ def recv_line_client(s):
 
 HOST = input("Enter server IP address: ")
 if HOST == "":
-    HOST = "127.0.0.1" # Fixed a small typo here from your last version
+    HOST = "127.0.0.1" # Default to localhost
 PORT = 1337 
 USERNAME = input("Enter your username: ")
 
@@ -36,29 +36,26 @@ try:
         sock.connect((HOST, PORT))
         print(f"Connected to {HOST}:{PORT} as {USERNAME}")
         
-        # 1. Send username
+        # Send username to server
         sock.sendall(USERNAME.encode() + b'\n')
 
-        # 2. Login - Wait for server's first response
+        # Login - Wait for server's first response
         response_bytes = recv_line_client(sock)
         if response_bytes is None:
             print("Server closed connection during login.")
             sys.exit(1)
         
         response_str = response_bytes.decode()
-        # Print the first thing server says (e.g. "Enter password:", "Welcome...", "ERROR...")
+        # Print the first thing server says - could be prompt for password, welcome message, or error
         print(response_str) 
-
-        # 3. --- THIS IS THE UPDATED LOGIC ---
         
         if "Enter password:" in response_str:
-            # --- PATH 1: Existing User ---
+            # If user is in the remote database, we need to send password
             password = input(">> ")
             sock.sendall(password.encode() + b'\n')
             
-            # --- NEW FIX: ---
-            # Wait for the server's *confirmation* message
-            # (e.g., "Authenticated successfully." or an error)
+           
+            # Wait for the server's *confirmation* message (e.g., "Authenticated successfully." or an error)
             auth_response_bytes = recv_line_client(sock)
             
             if auth_response_bytes is None:
@@ -77,13 +74,11 @@ try:
             # If we get here, login was successful, proceed to main loop.
 
         elif "registered" in response_str:
-            # --- PATH 2: New User ---
             # We already printed the "Welcome..." message.
-            # Nothing else to do, proceed to main loop.
+            # TODO: Add shit (copilot thinks "shit" should be "support" what a dumbass) for private key
             pass
 
         elif "ERROR:" in response_str:
-            # --- PATH 3: Already Connected Error ---
             # We already printed the "ERROR..." message.
             # Just exit.
             sys.exit(1)
@@ -93,8 +88,6 @@ try:
             print(f"Unknown server response: {response_str}")
             sys.exit(1)
 
-
-        # 4. Send message loop
         # We only get here if login was successful.
         while True:
             message = input(">> ")
