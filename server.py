@@ -13,24 +13,23 @@ if len(sys.argv) > 1:
     except Exception:
         pass
 
-# --- Use a set for known users (fast 'in' check) ---
+# We use a set here so we don't have to worry about duplicate usernames
 knownUsers = set()
-# --- Use a dict to map connected usernames to their conn object ---
+# dict to map connected usernames to their conn object
 connectedUsers = {}
-# --- A lock to protect shared access to the user lists ---
+# lock to synchronize access to user lists
 user_lock = threading.Lock()
 
-# --- Hardcoded password ---
+# Hardcoded password (temporary)
 SECRET_PASSWORD = "a"
+# At some point when I stop being lazy, this will be a randomly generated string that will be encrypted 
 
 def recv_line(conn):
-    """
-    Reads a single line (up to a \n) from a socket.
-    Returns the line *without* the \n.
-    """
+    # Reads a single line (up to a \n) from a socket.
+    # Returns the line without the \n.
     message = b""
     while True:
-        chunk = conn.recv(1)  # Read one byte at a time
+        chunk = conn.recv(1)  # Read one byte at a time, this is used to solve some errors I was having
         if not chunk:
             # Client disconnected
             return None
@@ -40,8 +39,8 @@ def recv_line(conn):
         message += chunk
 
 def handle_client(conn, addr):
-    """Handle a single client connection in its own thread."""
-    username = None # Define username in this scope
+    # Handle a single client connection in its own thread.
+    username = None # Define username
     authenticated = False # Flag to track if user was added to lists
     
     try:
@@ -80,7 +79,7 @@ def handle_client(conn, addr):
                 
 
                 print(f"{username} ({addr}) authenticated successfully.")
-                # --- FIX: Use dict 'set' syntax ---
+                # Add to connected users
                 connectedUsers[username] = conn 
                 authenticated = True # Mark as added to the list
                 conn.sendall(b"Authenticated successfully.\n")
@@ -88,12 +87,10 @@ def handle_client(conn, addr):
             else:
                 # New user, add them
                 print(f"New user: {username}. Adding to known users.")
-                # --- FIX: Use set 'add' method ---
                 knownUsers.add(username) 
-                # --- FIX: Use dict 'set' syntax ---
                 connectedUsers[username] = conn 
                 authenticated = True # Mark as added to the list
-                # (Server logic implies new users don't need a password first time)
+                # At some point, we will have them enter their private key here
                 conn.sendall(f"Welcome, {username}! You are now registered.\n".encode())
 
 
@@ -104,16 +101,12 @@ def handle_client(conn, addr):
             if data is None: # Handle client disconnect
                 print(f"{username} ({addr}) disconnected")
                 break
-            
-            # --- FIX: Decode message *before* checking it ---
             message = data.decode()
-            
-            # --- FIX: Check the decoded string ---
+            # Handle special commands
             if message == "/list":
                 user_list = ""
-                # --- Protect read access to the list ---
                 with user_lock:
-                    # --- FIX: Get keys from the dict ---
+                    # Create a comma-separated list of connected users
                     user_list = ", ".join(connectedUsers.keys())
                 
                 conn.sendall(f"Connected users: {user_list}\n".encode())
@@ -122,13 +115,11 @@ def handle_client(conn, addr):
             print(f"Received {message!r} from {username}")
             
             # Send the reply back WITH a newline, so the client can read it
-            # (We send the original 'data' bytes back)
             conn.sendall(data + b'\n')
             
     except Exception as e:
         print(f"Error with {addr}: {e}")
     finally:
-        # --- FIX: Clean up user from connected list ---
         # Only remove them if they were successfully authenticated and added
         if authenticated:
             with user_lock:
