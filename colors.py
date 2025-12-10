@@ -16,8 +16,6 @@ COLORS = {
     "RESET": "\33[0m",
     "BOLD": "\33[1m",
     "UNDERLINE": "\33[4m",
-
-    # --- "Cold" Color Scheme ---
     
     # System/Info messages (Bright Cyan)
     "SYSTEM": "\33[38;2;102;217;255m",

@@ -1,5 +1,6 @@
 import socket
 import sys
+from colors import cprint, print_error, print_info, print_success, print_warning, print_received, get_prompt, cstr
 
 # Helper function for the client (similar function found in server.py)
 def recv_line_client(s):
@@ -13,28 +14,28 @@ def recv_line_client(s):
             chunk = s.recv(1)
             if not chunk:
                 # Server disconnected
-                print("Server disconnected.")
+                print_warning("Server disconnected.")
                 return None
             if chunk == b'\n':
                 # End of the line
                 return message
             message += chunk
         except ConnectionError:
-            print("Connection lost.")
+            print_error("Connection lost.")
             return None
 
 
 
-HOST = input("Enter server IP address: ")
+HOST = input(get_prompt("Enter server IP address >> "))
 if HOST == "":
     HOST = "127.0.0.1" # Default to localhost
 PORT = 1337 
-USERNAME = input("Enter your username: ")
+USERNAME = input(get_prompt("Enter your username >> "))
 
 try:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.connect((HOST, PORT))
-        print(f"Connected to {HOST}:{PORT} as {USERNAME}")
+        print_success(f"Connected to {HOST}:{PORT} as {USERNAME}")
         
         # Send username to server
         sock.sendall(USERNAME.encode() + b'\n')
@@ -42,16 +43,16 @@ try:
         # Login - Wait for server's first response
         response_bytes = recv_line_client(sock)
         if response_bytes is None:
-            print("Server closed connection during login.")
+            print_error("Server closed connection during login.")
             sys.exit(1)
         
         response_str = response_bytes.decode()
         # Print the first thing server says - could be prompt for password, welcome message, or error
-        print(response_str) 
+        print_info(response_str) 
         
         if "Enter password:" in response_str:
             # If user is in the remote database, we need to send password
-            password = input(">> ")
+            password = input(get_prompt(">> "))
             sock.sendall(password.encode() + b'\n')
             
            
@@ -60,15 +61,16 @@ try:
             
             if auth_response_bytes is None:
                 # This happens if password was wrong and server just disconnected
-                print("Login failed. Server disconnected.")
+                print_error("Login failed. Server disconnected.")
                 sys.exit(1)
                 
             # Print the confirmation (e.g., "Authenticated successfully.")
             auth_response_str = auth_response_bytes.decode()
-            print(auth_response_str)
+            print_success(auth_response_str) if "success" in auth_response_str.lower() else print_info(auth_response_str)
             
             # If the confirmation was an error, exit
             if "ERROR:" in auth_response_str:
+                 print_error("Authentication failed.")
                  sys.exit(1) # Quit
             
             # If we get here, login was successful, proceed to main loop.
@@ -90,7 +92,7 @@ try:
 
         # We only get here if login was successful.
         while True:
-            message = input(">> ")
+            message = input(get_prompt(">> "))
             if not message:
                 continue
             
@@ -99,10 +101,10 @@ try:
             data = recv_line_client(sock)
             
             if data is None:
-                print("Connection closed by server.")
+                print_warning("Connection closed by server.")
                 break
                 
-            print(f"Received: {data.decode()!r}")
+            print_received(f"Received: {data.decode()!r}")
 
 except KeyboardInterrupt:
     print("\nDisconnecting...")

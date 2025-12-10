@@ -2,6 +2,7 @@ import socket
 import threading
 import os
 import sys
+from colors import cprint, print_error, print_info, print_success, print_warning, print_received, get_prompt, cstr
 
 HOST = "127.0.0.1"
 # Allow overriding the port via env var LUCIA_PORT or first CLI arg
@@ -47,18 +48,18 @@ def handle_client(conn, addr):
         # Read the username
         username_bytes = recv_line(conn)
         if not username_bytes:
-            print(f"Connection from {addr} closed before sending username")
+            print_warning(f"Connection from {addr} closed before sending username")
             return
         
         username = username_bytes.decode()
-        print(f"Connected by {addr} as {username}")
+        print_info(f"Connected by {addr} as {username}")
 
         with user_lock:
             if (username in knownUsers):
                 
                 # Check if user is already connected
                 if username in connectedUsers:
-                    print(f"{username} is already connected. Disconnecting new session.")
+                    print_warning(f"{username} is already connected. Disconnecting new session.")
                     conn.sendall(b"ERROR: You are already connected elsewhere.\n")
                     return
                 # Send password prompt
@@ -67,18 +68,18 @@ def handle_client(conn, addr):
                 # Read password response
                 password_bytes = recv_line(conn)
                 if not password_bytes:
-                    print(f"{username} ({addr}) disconnected before sending password")
+                    print_warning(f"{username} ({addr}) disconnected before sending password")
                     return
 
                 password = password_bytes.decode()
 
                 # Check password
                 if password != SECRET_PASSWORD:
-                    print(f"Incorrect password '{password}' from {username} ({addr}). Disconnecting.")
+                    print_error(f"Incorrect password '{password}' from {username} ({addr}). Disconnecting.")
                     return # Close connection by exiting thread
                 
 
-                print(f"{username} ({addr}) authenticated successfully.")
+                print_success(f"{username} ({addr}) authenticated successfully.")
                 # Add to connected users
                 connectedUsers[username] = conn 
                 authenticated = True # Mark as added to the list
@@ -86,7 +87,7 @@ def handle_client(conn, addr):
                 
             else:
                 # New user, add them
-                print(f"New user: {username}. Adding to known users.")
+                print_success(f"New user: {username}. Adding to known users.")
                 knownUsers.add(username) 
                 connectedUsers[username] = conn 
                 authenticated = True # Mark as added to the list
@@ -99,7 +100,7 @@ def handle_client(conn, addr):
             # Use the helper to read just the message
             data = recv_line(conn)
             if data is None: # Handle client disconnect
-                print(f"{username} ({addr}) disconnected")
+                print_info(f"{username} ({addr}) disconnected")
                 break
             message = data.decode()
             # Handle special commands
@@ -112,13 +113,13 @@ def handle_client(conn, addr):
                 conn.sendall(f"Connected users: {user_list}\n".encode())
                 continue
             
-            print(f"Received {message!r} from {username}")
+            print_received(f"Received {message!r} from {username}")
             
             # Send the reply back WITH a newline, so the client can read it
             conn.sendall(data + b'\n')
             
     except Exception as e:
-        print(f"Error with {addr}: {e}")
+        print_error(f"Error with {addr}: {e}")
     finally:
         # Only remove them if they were successfully authenticated and added
         if authenticated:
@@ -126,7 +127,7 @@ def handle_client(conn, addr):
                 # Check if they are still in the list before deleting
                 if username in connectedUsers:
                     del connectedUsers[username]
-                    print(f"Removed {username} from connected list.")
+                    print_info(f"Removed {username} from connected list.")
         
         try:
             conn.close()
@@ -142,7 +143,7 @@ def main():
         
         sock.bind((HOST, PORT))
         sock.listen()
-        print(f"Server listening on {HOST}:{PORT}")
+        print_info(f"Server listening on {HOST}:{PORT}")
         
         try:
             while True:
@@ -156,7 +157,7 @@ def main():
                     pass 
 
         except KeyboardInterrupt:
-            print("Shutting down server")
+            print_warning("Shutting down server")
 
 if __name__ == '__main__':
     main()
