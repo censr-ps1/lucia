@@ -1,0 +1,11 @@
+# Lucia - Privacy-focused encrypted communication platform
+# No external dependencies - uses Python standard library only
+# Python version: 3.8+
+
+# Standard library modules used:
+# - socket: TCP socket communication
+# - threading: Multi-threaded client handling
+# - os: Environment variable access
+# - sys: Command-line argument parsing
+# - datetime: Message timestamps
+# - typing: Type hints
