@@ -51,8 +51,8 @@ These are the things that still needed to be added
 
 Basic Functionality
 
-- [ ] Setup server so it only forwards messages between users
+- [x] Setup server so it only forwards messages between users
 - [ ] Add encryption funcionality with PGP
-- [ ] Make it look sexy
+- [ ] Make it look sexy (fix the many formatting issues whne issuing commands to the server)
 
 
